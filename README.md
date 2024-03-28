@@ -1,3 +1,3 @@
 # reqwest-enum
 
-Typed enum HTTP API for reqest, inspired by Moya.
+Typed enum HTTP API for reqwest, inspired by Moya.
