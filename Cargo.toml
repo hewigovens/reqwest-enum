@@ -1,0 +1,15 @@
+[workspace]
+package.version = "0.1.0"
+package.edition = "2021"
+members = ["reqwest-enum", "examples/ethereum-rpc"]
+
+resolver = "2"
+
+[workspace.dependencies]
+reqwest-enum = { path = "./reqwest-enum" }
+reqwest = { version = "0.12.2", features = ["json"] }
+
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.115"
+
+async-trait = "0.1.79"
