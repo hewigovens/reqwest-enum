@@ -39,7 +39,7 @@ impl HTTPBody {
         T: serde::Serialize,
     {
         let mut bytes: Vec<u8> = Vec::new();
-        serde_json::to_writer(&mut bytes, structure).unwrap();
+        serde_json::to_writer(&mut bytes, structure).expect("serde_json serialize error");
         Self {
             inner: bytes.into(),
         }

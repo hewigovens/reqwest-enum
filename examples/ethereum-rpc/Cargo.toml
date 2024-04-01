@@ -9,3 +9,6 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 reqwest = { workspace = true }
 reqwest-enum = { workspace = true }
+
+[dev-dependencies]
+tokio-test = "0.4.2"
