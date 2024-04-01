@@ -2,30 +2,21 @@ extern crate reqwest_enum;
 mod ethereum_rpc;
 use ethereum_rpc::EthereumRPC;
 use reqwest_enum::jsonrpc::JsonRpcResponse;
-use reqwest_enum::provider::{Provider, ProviderType};
+use reqwest_enum::provider::{JsonProviderType, Provider, ProviderType};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let provider = Provider::<EthereumRPC>::default();
-    let mut json_resp: JsonRpcResponse<String> =
-        provider.request(EthereumRPC::ChainId).await?.json().await?;
-    println!("chainId: {}", json_resp.result);
+    let mut response: JsonRpcResponse<String> = provider.request_json(EthereumRPC::ChainId).await?;
+    println!("chainId: {}", response.result);
 
-    json_resp = provider
-        .request(EthereumRPC::GasPrice)
-        .await?
-        .json()
-        .await?;
-    println!("gasPrice: {}", json_resp.result);
+    response = provider.request_json(EthereumRPC::GasPrice).await?;
+    println!("gasPrice: {}", response.result);
 
-    json_resp = provider
-        .request(EthereumRPC::BlockNumber)
-        .await?
-        .json()
-        .await?;
-    println!("blockNumber: {}", json_resp.result);
+    response = provider.request_json(EthereumRPC::BlockNumber).await?;
+    println!("blockNumber: {}", response.result);
 
-    json_resp = provider
+    response = provider
         .request(EthereumRPC::GetBalance(
             "0xee5f5c53ce2159fc6dd4b0571e86a4a390d04846",
         ))
@@ -33,6 +24,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .json()
         .await?;
 
-    println!("balance: {}", json_resp.result);
+    println!("balance: {}", response.result);
     Ok(())
 }
