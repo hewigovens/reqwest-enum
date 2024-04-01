@@ -34,12 +34,23 @@ impl From<HTTPMethod> for Method {
 }
 
 impl HTTPBody {
-    pub fn from<T>(structure: &T) -> Self
+    pub fn from<T>(value: &T) -> Self
     where
         T: serde::Serialize,
     {
         let mut bytes: Vec<u8> = Vec::new();
-        serde_json::to_writer(&mut bytes, structure).expect("serde_json serialize error");
+        serde_json::to_writer(&mut bytes, value).expect("serde_json serialize error");
+        Self {
+            inner: bytes.into(),
+        }
+    }
+
+    pub fn from_array<T>(array: &[T]) -> Self
+    where
+        T: serde::Serialize,
+    {
+        let mut bytes: Vec<u8> = Vec::new();
+        serde_json::to_writer(&mut bytes, array).expect("serde_json serialize error");
         Self {
             inner: bytes.into(),
         }

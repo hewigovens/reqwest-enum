@@ -1,18 +1,23 @@
 extern crate reqwest_enum;
 use ethereum_rpc::EthereumRPC;
-use reqwest_enum::jsonrpc::JsonRpcResponse;
-use reqwest_enum::provider::{JsonProviderType, Provider};
+use reqwest_enum::jsonrpc::JsonRpcResult;
+use reqwest_enum::provider::{JsonRpcProviderType, Provider};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let provider = Provider::<EthereumRPC>::default();
-    let mut response: JsonRpcResponse<String> = provider.request_json(EthereumRPC::ChainId).await?;
-    println!("chainId: {}", response.result);
 
-    response = provider.request_json(EthereumRPC::GasPrice).await?;
-    println!("gasPrice: {}", response.result);
-
-    response = provider.request_json(EthereumRPC::BlockNumber).await?;
-    println!("blockNumber: {}", response.result);
+    let targets = vec![EthereumRPC::ChainId, EthereumRPC::GasPrice];
+    let results: Vec<JsonRpcResult<String>> = provider.batch(targets).await?;
+    for result in results {
+        match result {
+            JsonRpcResult::Value(response) => {
+                println!("{}", response.result);
+            }
+            JsonRpcResult::Error(error) => {
+                println!("{}", error.error);
+            }
+        }
+    }
     Ok(())
 }

@@ -1,4 +1,6 @@
 pub mod http;
-pub mod jsonrpc;
 pub mod provider;
 pub mod target;
+
+#[cfg(feature = "jsonrpc")]
+pub mod jsonrpc;

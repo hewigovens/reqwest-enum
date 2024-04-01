@@ -1,6 +1,6 @@
 extern crate reqwest;
 extern crate reqwest_enum;
-use reqwest_enum::jsonrpc::JsonRpcRequest;
+use reqwest_enum::jsonrpc::{JsonRpcRequest, JsonRpcTarget};
 use reqwest_enum::{
     http::{HTTPBody, HTTPMethod},
     target::Target,
@@ -60,8 +60,8 @@ pub enum EthereumRPC {
     SendRawTransaction(&'static str),
 }
 
-impl EthereumRPC {
-    pub fn method_name(&self) -> &'static str {
+impl JsonRpcTarget for EthereumRPC {
+    fn method_name(&self) -> &'static str {
         match self {
             EthereumRPC::ChainId => "eth_chainId",
             EthereumRPC::GasPrice => "eth_gasPrice",
@@ -75,7 +75,7 @@ impl EthereumRPC {
         }
     }
 
-    pub fn params(&self) -> Vec<Value> {
+    fn params(&self) -> Vec<Value> {
         match self {
             EthereumRPC::GetBalance(address) => vec![
                 Value::String(address.to_string()),

@@ -1,16 +1,34 @@
-use crate::{http::HTTPResponse, target::Target};
+#[cfg(feature = "jsonrpc")]
+use crate::jsonrpc::{JsonRpcError, JsonRpcRequest, JsonRpcResult, JsonRpcTarget};
+use crate::{
+    http::{HTTPBody, HTTPResponse},
+    target::Target,
+};
+
 use async_trait::async_trait;
 use reqwest::{Client, Error};
 use serde::de::DeserializeOwned;
 
 #[async_trait]
 pub trait ProviderType<T: Target> {
+    /// request to target and return http response
     async fn request(&self, target: T) -> Result<HTTPResponse, Error>;
 }
 
 #[async_trait]
 pub trait JsonProviderType<T: Target>: ProviderType<T> {
+    /// request and deserialize response to json using serde
     async fn request_json<U: DeserializeOwned>(&self, target: T) -> Result<U, Error>;
+}
+
+#[cfg(feature = "jsonrpc")]
+#[async_trait]
+pub trait JsonRpcProviderType<T: Target>: ProviderType<T> {
+    /// batch isomorphic JSON-RPC requests
+    async fn batch<U: DeserializeOwned>(
+        &self,
+        targets: Vec<T>,
+    ) -> Result<Vec<JsonRpcResult<U>>, JsonRpcError>;
 }
 
 pub type EndpointFn<T> = fn(target: &T) -> String;
@@ -26,18 +44,9 @@ where
     T: Target + Send,
 {
     async fn request(&self, target: T) -> Result<HTTPResponse, Error> {
-        let url = self._request_url(&target);
-        let mut request = self.client.request(target.method().into(), &url);
-        let query_map = target.query();
-        if !query_map.is_empty() {
-            request = request.query(&query_map);
-        }
-        if !target.headers().is_empty() {
-            for (k, v) in target.headers() {
-                request = request.header(k, v);
-            }
-        }
-        request.body(target.body().inner).send().await
+        let mut request = self.request_builder(&target);
+        request = request.body(target.body().inner);
+        request.send().await
     }
 }
 
@@ -49,6 +58,38 @@ where
     async fn request_json<U: DeserializeOwned>(&self, target: T) -> Result<U, Error> {
         let response = self.request(target).await?;
         let body = response.json::<U>().await?;
+        Ok(body)
+    }
+}
+
+#[cfg(feature = "jsonrpc")]
+#[async_trait]
+impl<T> JsonRpcProviderType<T> for Provider<T>
+where
+    T: JsonRpcTarget + Send,
+{
+    async fn batch<U: DeserializeOwned>(
+        &self,
+        targets: Vec<T>,
+    ) -> Result<Vec<JsonRpcResult<U>>, JsonRpcError> {
+        if targets.is_empty() {
+            return Err(JsonRpcError {
+                code: -32600,
+                message: "Invalid Request".into(),
+            });
+        }
+
+        let target = &targets[0];
+        let mut request = self.request_builder(target);
+        let mut requests = Vec::<JsonRpcRequest>::new();
+        for (k, v) in targets.iter().enumerate() {
+            let request = JsonRpcRequest::new(v.method_name(), v.params(), k as u64);
+            requests.push(request);
+        }
+
+        request = request.body(HTTPBody::from_array(&requests).inner);
+        let response = request.send().await?;
+        let body = response.json::<Vec<JsonRpcResult<U>>>().await?;
         Ok(body)
     }
 }
@@ -65,12 +106,27 @@ where
         }
     }
 
-    fn _request_url(&self, target: &T) -> String {
+    pub(crate) fn request_url(&self, target: &T) -> String {
         let mut url = format!("{}{}", target.base_url(), target.path());
         if let Some(func) = &self.endpoint_fn {
             url = func(target);
         }
         url
+    }
+
+    pub(crate) fn request_builder(&self, target: &T) -> reqwest::RequestBuilder {
+        let url = self.request_url(target);
+        let mut request = self.client.request(target.method().into(), url);
+        let query_map = target.query();
+        if !query_map.is_empty() {
+            request = request.query(&query_map);
+        }
+        if !target.headers().is_empty() {
+            for (k, v) in target.headers() {
+                request = request.header(k, v);
+            }
+        }
+        request
     }
 }
 
@@ -148,15 +204,14 @@ mod tests {
     }
 
     #[test]
-    fn test_provider() {
-        // test endpoint closure
+    fn test_test_endpoint_closure() {
         let provider = Provider::<HttpBin>::default();
         assert_eq!(
-            provider._request_url(&HttpBin::Get),
+            provider.request_url(&HttpBin::Get),
             "https://httpbin.org/get"
         );
 
         let provider = Provider::<HttpBin>::new(|_: &HttpBin| "http://httpbin.org".to_string());
-        assert_eq!(provider._request_url(&HttpBin::Post), "http://httpbin.org");
+        assert_eq!(provider.request_url(&HttpBin::Post), "http://httpbin.org");
     }
 }

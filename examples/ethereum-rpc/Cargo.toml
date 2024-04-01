@@ -8,7 +8,7 @@ tokio = { version = "1.36.0", features = ["full"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 reqwest = { workspace = true }
-reqwest-enum = { workspace = true }
+reqwest-enum = { workspace = true, features = ["jsonrpc"] }
 
 [dev-dependencies]
 tokio-test = "0.4.2"

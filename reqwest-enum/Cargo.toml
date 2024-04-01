@@ -3,6 +3,10 @@ name = "reqwest-enum"
 version = { workspace = true }
 edition = { workspace = true }
 
+[features]
+default = ["jsonrpc"]
+jsonrpc = []
+
 [dependencies]
 reqwest = { workspace = true }
 serde = { workspace = true }
