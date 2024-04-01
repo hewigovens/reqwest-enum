@@ -1,5 +1,7 @@
+use crate::http::HTTPBody;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
 #[derive(Serialize, Deserialize)]
 pub struct JsonRpcRequest {
     pub jsonrpc: &'static str,
@@ -9,10 +11,10 @@ pub struct JsonRpcRequest {
 }
 
 impl JsonRpcRequest {
-    pub fn new(method: &'static str, params: Vec<Value>) -> Self {
+    pub fn new(method: &'static str, params: Vec<Value>, id: u64) -> Self {
         Self {
             jsonrpc: "2.0",
-            id: 1,
+            id,
             method,
             params,
         }
@@ -22,6 +24,12 @@ impl JsonRpcRequest {
 impl From<JsonRpcRequest> for reqwest::Body {
     fn from(val: JsonRpcRequest) -> Self {
         serde_json::to_vec(&val).unwrap().into()
+    }
+}
+
+impl From<JsonRpcRequest> for HTTPBody {
+    fn from(val: JsonRpcRequest) -> Self {
+        HTTPBody::from(&val)
     }
 }
 

@@ -1,7 +1,10 @@
 extern crate reqwest;
 extern crate reqwest_enum;
 use reqwest_enum::jsonrpc::JsonRpcRequest;
-use reqwest_enum::target::Target;
+use reqwest_enum::{
+    http::{HTTPBody, HTTPMethod},
+    target::Target,
+};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -43,8 +46,8 @@ impl Target for EthereumRPC {
         "https://rpc.ankr.com"
     }
 
-    fn method(&self) -> reqwest::Method {
-        reqwest::Method::POST
+    fn method(&self) -> HTTPMethod {
+        HTTPMethod::POST
     }
 
     fn path(&self) -> &'static str {
@@ -61,10 +64,10 @@ impl Target for EthereumRPC {
         headers
     }
 
-    fn body(&self) -> reqwest::Body {
+    fn body(&self) -> HTTPBody {
         let method = self.method_name();
         let params = self.params();
-        let req = JsonRpcRequest::new(method, params);
+        let req = JsonRpcRequest::new(method, params, 1);
         req.into()
     }
 }
