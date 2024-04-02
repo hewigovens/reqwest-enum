@@ -1,4 +1,5 @@
 # reqwest-enum
+[![crates.io](https://img.shields.io/crates/v/reqwest-enum.svg)](https://crates.io/crates/reqwest-enum)
 [![CI](https://github.com/hewigovens/reqwest-enum/actions/workflows/ci.yml/badge.svg)](https://github.com/hewigovens/reqwest-enum/actions/workflows/ci.yml)
 
 Typed enum HTTP API for [reqwest](https://github.com/seanmonstar/reqwest), inspired by [Moya](https://github.com/Moya/Moya).
