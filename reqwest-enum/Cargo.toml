@@ -4,10 +4,10 @@ description = "Typed enum HTTP API for reqwest."
 keywords = ["request", "enum"]
 categories = ["web-programming::http-client"]
 repository = "https://github.com/hewigovens/reqwest-enum"
-documentation = "https://docs.rs/reqwest_enum"
-authors = ["Tao Xu <hewig@duck.com>"]
-readme = "README.md"
-license = "MIT OR Apache-2.0"
+documentation = { workspace = true }
+authors = { workspace = true }
+readme = { workspace = true }
+license = { workspace = true }
 version = { workspace = true }
 edition = { workspace = true }
 
