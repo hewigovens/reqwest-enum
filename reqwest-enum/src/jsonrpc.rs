@@ -40,7 +40,7 @@ impl From<JsonRpcRequest> for HTTPBody {
 #[cfg(feature = "jsonrpc")]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonRpcResponse<T> {
-    pub id: u64,
+    pub id: JsonRpcId,
     pub jsonrpc: String,
     pub result: T,
 }
@@ -49,8 +49,8 @@ pub struct JsonRpcResponse<T> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonRpcErrorResponse {
     pub jsonrpc: String,
-    pub id: u64,
-    pub error: String,
+    pub id: JsonRpcId,
+    pub error: JsonRpcError,
 }
 
 #[cfg(feature = "jsonrpc")]
@@ -60,8 +60,10 @@ pub struct JsonRpcError {
     pub message: String,
 }
 
+#[cfg(feature = "jsonrpc")]
 impl std::error::Error for JsonRpcError {}
 
+#[cfg(feature = "jsonrpc")]
 impl From<reqwest::Error> for JsonRpcError {
     fn from(err: reqwest::Error) -> Self {
         JsonRpcError {
