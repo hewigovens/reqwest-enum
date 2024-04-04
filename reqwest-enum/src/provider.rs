@@ -89,7 +89,7 @@ where
         let mut request = self.request_builder(target);
         let mut requests = Vec::<JsonRpcRequest>::new();
         for (k, v) in targets.iter().enumerate() {
-            let request = JsonRpcRequest::new(v.method_name(), v.params(), k as u64);
+            let request = JsonRpcRequest::new(v.method_name(), v.params(), (k + 1) as u64);
             requests.push(request);
         }
 
@@ -122,7 +122,7 @@ where
                 let request = JsonRpcRequest::new(
                     v.method_name(),
                     v.params(),
-                    (chunk_idx * chunk_size + k) as u64,
+                    (chunk_idx * chunk_size + k + 1) as u64,
                 );
                 requests.push(request);
             }

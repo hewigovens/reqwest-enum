@@ -6,7 +6,7 @@ use reqwest_enum::{
     target::Target,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Number, Value};
 use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize)]
@@ -20,6 +20,7 @@ pub struct TransactionObject {
 }
 
 pub enum BlockParameter {
+    // hexadecimal block number
     Number(&'static str),
     Latest,
     Earliest,
@@ -48,21 +49,33 @@ impl From<&BlockParameter> for serde_json::Value {
     }
 }
 
+fn u64_to_value(val: &u64) -> serde_json::Value {
+    Value::Number(Number::from(*val))
+}
+
 pub enum EthereumRPC {
-    ChainId,
-    GasPrice,
     BlockNumber,
-    GetBalance(&'static str),
-    GetBlockByNumber(&'static str, bool),
-    GetTransactionCount(&'static str, BlockParameter),
+    BlobBaseFee,
+    ChainId,
     Call(TransactionObject, BlockParameter),
     EstimateGas(TransactionObject),
+    // blockCount, newestBlock, rewardPercentiles
+    FeeHistory(u64, BlockParameter, Vec<u64>),
+    GasPrice,
+    // addrees
+    GetBalance(&'static str),
+    GetBlockByNumber(BlockParameter, bool),
+    GetCode(&'static str, BlockParameter),
+    // address, blockNumber
+    GetTransactionCount(&'static str, BlockParameter),
     SendRawTransaction(&'static str),
+    Syncing,
 }
 
 impl JsonRpcTarget for EthereumRPC {
     fn method_name(&self) -> &'static str {
         match self {
+            EthereumRPC::Syncing => "eth_syncing",
             EthereumRPC::ChainId => "eth_chainId",
             EthereumRPC::GasPrice => "eth_gasPrice",
             EthereumRPC::BlockNumber => "eth_blockNumber",
@@ -72,6 +85,9 @@ impl JsonRpcTarget for EthereumRPC {
             EthereumRPC::GetTransactionCount(_, _) => "eth_getTransactionCount",
             EthereumRPC::Call(_, _) => "eth_call",
             EthereumRPC::EstimateGas(_) => "eth_estimateGas",
+            EthereumRPC::FeeHistory(_, _, _) => "eth_feeHistory",
+            EthereumRPC::GetCode(_, _) => "eth_getCode",
+            EthereumRPC::BlobBaseFee => "eth_blobBaseFee",
         }
     }
 
@@ -85,10 +101,7 @@ impl JsonRpcTarget for EthereumRPC {
                 vec![Value::String(tx.to_string())]
             }
             EthereumRPC::GetBlockByNumber(block, full) => {
-                vec![
-                    Value::String(block.to_string()),
-                    Value::Bool(full.to_owned()),
-                ]
+                vec![block.into(), Value::Bool(full.to_owned())]
             }
             EthereumRPC::GetTransactionCount(address, block) => {
                 vec![Value::String(address.to_string()), block.into()]
@@ -101,9 +114,23 @@ impl JsonRpcTarget for EthereumRPC {
                 let value = serde_json::to_value(tx).unwrap();
                 vec![value]
             }
-            EthereumRPC::ChainId => vec![],
-            EthereumRPC::GasPrice => vec![],
-            EthereumRPC::BlockNumber => vec![],
+            EthereumRPC::FeeHistory(block_count, block, reward_percentiles) => {
+                let mut params = vec![
+                    u64_to_value(block_count),
+                    block.into(),
+                    Value::Array(reward_percentiles.iter().map(u64_to_value).collect()),
+                ];
+                params.push(Value::Bool(false));
+                params
+            }
+            EthereumRPC::GetCode(address, block) => {
+                vec![Value::String(address.to_string()), block.into()]
+            }
+            EthereumRPC::ChainId
+            | EthereumRPC::GasPrice
+            | EthereumRPC::BlockNumber
+            | EthereumRPC::Syncing
+            | EthereumRPC::BlobBaseFee => vec![],
         }
     }
 }
