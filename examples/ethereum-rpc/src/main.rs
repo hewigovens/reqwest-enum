@@ -1,7 +1,7 @@
 extern crate reqwest_enum;
 use ethereum_rpc::EthereumRPC;
 use reqwest_enum::jsonrpc::JsonRpcResult;
-use reqwest_enum::provider::{JsonRpcProviderType, JsonRpcProviderType2, Provider};
+use reqwest_enum::provider::{JsonRpcProviderType, Provider};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

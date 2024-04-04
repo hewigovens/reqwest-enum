@@ -1,39 +1,38 @@
 #[cfg(feature = "jsonrpc")]
 use crate::jsonrpc::{JsonRpcError, JsonRpcRequest, JsonRpcResult, JsonRpcTarget};
+#[cfg(feature = "jsonrpc")]
+use futures::future::join_all;
+
 use crate::{
     http::{HTTPBody, HTTPResponse},
     target::Target,
 };
-
-use async_trait::async_trait;
+use core::future::Future;
 use reqwest::{Client, Error};
 use serde::de::DeserializeOwned;
 
-#[async_trait]
-pub trait ProviderType<T: Target> {
+pub trait ProviderType<T: Target>: Send {
     /// request to target and return http response
-    async fn request(&self, target: T) -> Result<HTTPResponse, Error>;
+    fn request(&self, target: T) -> impl Future<Output = Result<HTTPResponse, Error>>;
 }
 
-#[async_trait]
 pub trait JsonProviderType<T: Target>: ProviderType<T> {
     /// request and deserialize response to json using serde
-    async fn request_json<U: DeserializeOwned>(&self, target: T) -> Result<U, Error>;
+    fn request_json<U: DeserializeOwned>(
+        &self,
+        target: T,
+    ) -> impl Future<Output = Result<U, Error>>;
 }
 
 #[cfg(feature = "jsonrpc")]
-#[async_trait]
+
 pub trait JsonRpcProviderType<T: Target>: ProviderType<T> {
     /// batch isomorphic JSON-RPC requests
-    async fn batch<U: DeserializeOwned>(
+    fn batch<U: DeserializeOwned>(
         &self,
         targets: Vec<T>,
-    ) -> Result<Vec<JsonRpcResult<U>>, JsonRpcError>;
-}
+    ) -> impl Future<Output = Result<Vec<JsonRpcResult<U>>, JsonRpcError>>;
 
-use core::future::Future;
-use futures::future::join_all;
-pub trait JsonRpcProviderType2<T: Target>: ProviderType<T> {
     fn batch_chunk_by<U: DeserializeOwned>(
         &self,
         targets: Vec<T>,
@@ -48,7 +47,6 @@ pub struct Provider<T: Target> {
     client: Client,
 }
 
-#[async_trait]
 impl<T> ProviderType<T> for Provider<T>
 where
     T: Target + Send,
@@ -60,7 +58,6 @@ where
     }
 }
 
-#[async_trait]
 impl<T> JsonProviderType<T> for Provider<T>
 where
     T: Target + Send,
@@ -73,7 +70,6 @@ where
 }
 
 #[cfg(feature = "jsonrpc")]
-#[async_trait]
 impl<T> JsonRpcProviderType<T> for Provider<T>
 where
     T: JsonRpcTarget + Send,
@@ -102,12 +98,7 @@ where
         let body = response.json::<Vec<JsonRpcResult<U>>>().await?;
         Ok(body)
     }
-}
 
-impl<T> JsonRpcProviderType2<T> for Provider<T>
-where
-    T: JsonRpcTarget + Send,
-{
     async fn batch_chunk_by<U: DeserializeOwned>(
         &self,
         targets: Vec<T>,
