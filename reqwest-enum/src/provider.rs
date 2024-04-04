@@ -31,6 +31,16 @@ pub trait JsonRpcProviderType<T: Target>: ProviderType<T> {
     ) -> Result<Vec<JsonRpcResult<U>>, JsonRpcError>;
 }
 
+use core::future::Future;
+use futures::future::join_all;
+pub trait JsonRpcProviderType2<T: Target>: ProviderType<T> {
+    fn batch_chunk_by<U: DeserializeOwned>(
+        &self,
+        targets: Vec<T>,
+        chunk_size: usize,
+    ) -> impl Future<Output = Result<Vec<JsonRpcResult<U>>, JsonRpcError>>;
+}
+
 pub type EndpointFn<T> = fn(target: &T) -> String;
 pub struct Provider<T: Target> {
     /// endpoint closure to customize the endpoint (url / path)
@@ -91,6 +101,68 @@ where
         let response = request.send().await?;
         let body = response.json::<Vec<JsonRpcResult<U>>>().await?;
         Ok(body)
+    }
+}
+
+impl<T> JsonRpcProviderType2<T> for Provider<T>
+where
+    T: JsonRpcTarget + Send,
+{
+    async fn batch_chunk_by<U: DeserializeOwned>(
+        &self,
+        targets: Vec<T>,
+        chunk_size: usize,
+    ) -> Result<Vec<JsonRpcResult<U>>, JsonRpcError> {
+        if targets.is_empty() || chunk_size == 0 {
+            return Err(JsonRpcError {
+                code: -32600,
+                message: "Invalid Request".into(),
+            });
+        }
+
+        let chunk_targets = targets.chunks(chunk_size).collect::<Vec<_>>();
+        let mut rpc_requests = Vec::<reqwest::RequestBuilder>::new();
+
+        for (chunk_idx, chunk) in chunk_targets.into_iter().enumerate() {
+            let target = &chunk[0];
+            let mut request = self.request_builder(target);
+            let mut requests = Vec::<JsonRpcRequest>::new();
+            for (k, v) in chunk.iter().enumerate() {
+                let request = JsonRpcRequest::new(
+                    v.method_name(),
+                    v.params(),
+                    (chunk_idx * chunk_size + k) as u64,
+                );
+                requests.push(request);
+            }
+
+            request = request.body(HTTPBody::from_array(&requests).inner);
+            rpc_requests.push(request);
+        }
+        let bodies = join_all(rpc_requests.into_iter().map(|request| async move {
+            let response = request.send().await?;
+            let body = response.json::<Vec<JsonRpcResult<U>>>().await?;
+            Ok(body)
+        }))
+        .await;
+
+        let mut results = Vec::<JsonRpcResult<U>>::new();
+        let mut error: Option<JsonRpcError> = None;
+
+        for result in bodies {
+            match result {
+                Ok(body) => {
+                    results.extend(body);
+                }
+                Err(err) => {
+                    error = Some(err);
+                }
+            }
+        }
+        if let Some(err) = error {
+            return Err(err);
+        }
+        Ok(results)
     }
 }
 

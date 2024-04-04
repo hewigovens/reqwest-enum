@@ -1,14 +1,18 @@
 extern crate reqwest_enum;
 use ethereum_rpc::EthereumRPC;
 use reqwest_enum::jsonrpc::JsonRpcResult;
-use reqwest_enum::provider::{JsonRpcProviderType, Provider};
+use reqwest_enum::provider::{JsonRpcProviderType, JsonRpcProviderType2, Provider};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let provider = Provider::<EthereumRPC>::default();
 
-    let targets = vec![EthereumRPC::ChainId, EthereumRPC::GasPrice];
-    let results: Vec<JsonRpcResult<String>> = provider.batch(targets).await?;
+    let targets = vec![
+        EthereumRPC::ChainId,
+        EthereumRPC::GasPrice,
+        EthereumRPC::BlockNumber,
+    ];
+    let results: Vec<JsonRpcResult<String>> = provider.batch_chunk_by(targets, 2).await?;
     for result in results {
         match result {
             JsonRpcResult::Value(response) => {

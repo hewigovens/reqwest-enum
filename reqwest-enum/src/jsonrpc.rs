@@ -60,8 +60,10 @@ pub struct JsonRpcError {
     pub message: String,
 }
 
+#[cfg(feature = "jsonrpc")]
 impl std::error::Error for JsonRpcError {}
 
+#[cfg(feature = "jsonrpc")]
 impl From<reqwest::Error> for JsonRpcError {
     fn from(err: reqwest::Error) -> Self {
         JsonRpcError {
