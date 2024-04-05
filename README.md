@@ -2,12 +2,16 @@
 [![crates.io](https://img.shields.io/crates/v/reqwest-enum.svg)](https://crates.io/crates/reqwest-enum)
 [![CI](https://github.com/hewigovens/reqwest-enum/actions/workflows/ci.yml/badge.svg)](https://github.com/hewigovens/reqwest-enum/actions/workflows/ci.yml)
 
-Typed enum HTTP API for [reqwest](https://github.com/seanmonstar/reqwest), inspired by [Moya](https://github.com/Moya/Moya).
+Type-safe and enum style API for Rust, some benefits:
+
+1. It abstracts away repetitive boilerplate code like url formatting, query / header encoding and response deserialization.
+2. Type-safe endpoints, readable like a spec, easy to add new or refactor existing endpoints.
+3. Async by default and lightweight JSON-RPC support.
 
 Features:
 
-- [x] Typed enum HTTP API
-- [x] JSON-RPC
+- [x] Type-safe and enum style HTTP API
+- [x] JSON-RPC with batching support
 - [ ] ...
 
 
@@ -97,3 +101,8 @@ assert_eq!(response.result, "0x1");
 ## License
 
 [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE)
+
+## Credits
+
+- [Moya](https://github.com/Moya/Moya)
+- [reqwest](https://github.com/seanmonstar/reqwest)
