@@ -1,9 +1,9 @@
 extern crate reqwest;
 extern crate reqwest_enum;
-use reqwest_enum::jsonrpc::{JsonRpcRequest, JsonRpcTarget};
+use reqwest_enum::jsonrpc::JsonRpcRequest;
 use reqwest_enum::{
-    http::{HTTPBody, HTTPMethod},
-    target::Target,
+    http::{AuthMethod, HTTPBody, HTTPMethod},
+    target::{JsonRpcTarget, Target},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
@@ -156,6 +156,10 @@ impl Target for EthereumRPC {
         let mut headers = HashMap::new();
         headers.insert("Content-Type", "application/json");
         headers
+    }
+
+    fn authentication(&self) -> Option<AuthMethod> {
+        None
     }
 
     fn body(&self) -> HTTPBody {

@@ -20,3 +20,6 @@ reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 futures = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }

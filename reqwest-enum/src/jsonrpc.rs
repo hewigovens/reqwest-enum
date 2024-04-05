@@ -1,4 +1,4 @@
-use crate::{http::HTTPBody, target::Target};
+use crate::http::HTTPBody;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -86,12 +86,6 @@ impl std::fmt::Display for JsonRpcError {
 pub enum JsonRpcResult<T> {
     Value(JsonRpcResponse<T>),
     Error(JsonRpcErrorResponse),
-}
-
-#[cfg(feature = "jsonrpc")]
-pub trait JsonRpcTarget: Target {
-    fn method_name(&self) -> &'static str;
-    fn params(&self) -> Vec<Value>;
 }
 
 #[cfg(feature = "jsonrpc")]

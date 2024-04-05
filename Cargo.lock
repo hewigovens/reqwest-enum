@@ -145,7 +145,7 @@ dependencies = [
 
 [[package]]
 name = "ethereum-rpc"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "reqwest",
  "reqwest-enum",
@@ -745,12 +745,13 @@ dependencies = [
 
 [[package]]
 name = "reqwest-enum"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "futures",
  "reqwest",
  "serde",
  "serde_json",
+ "tokio-test",
 ]
 
 [[package]]

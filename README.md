@@ -17,7 +17,7 @@ Features:
 
 ```toml
 [dependencies]
-reqwest-enum = "0.1.0"
+reqwest-enum = "0.2.0"
 ```
 
 ## Example
@@ -30,6 +30,7 @@ reqwest-enum = "0.1.0"
 pub enum HttpBin {
     Get,
     Post,
+    Bearer,
 }
 ```
 
@@ -42,6 +43,7 @@ pub trait Target {
     fn path(&self) -> &'static str;
     fn query(&self) -> HashMap<&'static str, &'static str>;
     fn headers(&self) -> HashMap<&'static str, &'static str>;
+    fn authentication(&self) -> Option<AuthMethod>;
     fn body(&self) -> HTTPBody;
 }
 ```

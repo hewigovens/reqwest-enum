@@ -56,3 +56,10 @@ impl HTTPBody {
         }
     }
 }
+
+pub enum AuthMethod {
+    // Basic(username, password)
+    Basic(&'static str, &'static str),
+    // Bearer(token)
+    Bearer(&'static str),
+}

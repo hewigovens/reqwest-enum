@@ -1,10 +1,12 @@
 #[cfg(feature = "jsonrpc")]
-use crate::jsonrpc::{JsonRpcError, JsonRpcRequest, JsonRpcResult, JsonRpcTarget};
+use crate::jsonrpc::{JsonRpcError, JsonRpcRequest, JsonRpcResult};
+#[cfg(feature = "jsonrpc")]
+use crate::target::JsonRpcTarget;
 #[cfg(feature = "jsonrpc")]
 use futures::future::join_all;
 
 use crate::{
-    http::{HTTPBody, HTTPResponse},
+    http::{AuthMethod, HTTPBody, HTTPResponse},
     target::Target,
 };
 use core::future::Future;
@@ -189,6 +191,16 @@ where
                 request = request.header(k, v);
             }
         }
+        if let Some(auth) = target.authentication() {
+            match auth {
+                AuthMethod::Basic(username, password) => {
+                    request = request.basic_auth(username, Some(password));
+                }
+                AuthMethod::Bearer(token) => {
+                    request = request.bearer_auth(token);
+                }
+            }
+        }
         request
     }
 }
@@ -208,13 +220,13 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        http::{HTTPBody, HTTPMethod},
-        provider::Provider,
+        http::{AuthMethod, HTTPBody, HTTPMethod},
+        provider::{JsonProviderType, Provider},
         target::Target,
     };
     use serde::{Deserialize, Serialize};
     use std::collections::HashMap;
-
+    use tokio_test::block_on;
     #[derive(Serialize, Deserialize)]
     struct Person {
         name: String,
@@ -225,6 +237,7 @@ mod tests {
     enum HttpBin {
         Get,
         Post,
+        Bearer,
     }
 
     impl Target for HttpBin {
@@ -236,6 +249,7 @@ mod tests {
             match self {
                 HttpBin::Get => HTTPMethod::GET,
                 HttpBin::Post => HTTPMethod::POST,
+                HttpBin::Bearer => HTTPMethod::GET,
             }
         }
 
@@ -243,6 +257,7 @@ mod tests {
             match self {
                 HttpBin::Get => "/get",
                 HttpBin::Post => "/post",
+                HttpBin::Bearer => "/bearer",
             }
         }
 
@@ -254,9 +269,16 @@ mod tests {
             HashMap::default()
         }
 
+        fn authentication(&self) -> Option<AuthMethod> {
+            match self {
+                HttpBin::Bearer => Some(AuthMethod::Bearer("token")),
+                _ => None,
+            }
+        }
+
         fn body(&self) -> HTTPBody {
             match self {
-                HttpBin::Get => HTTPBody::default(),
+                HttpBin::Get | HttpBin::Bearer => HTTPBody::default(),
                 HttpBin::Post => HTTPBody::from(&Person {
                     name: "test".to_string(),
                     age: 20,
@@ -276,5 +298,18 @@ mod tests {
 
         let provider = Provider::<HttpBin>::new(|_: &HttpBin| "http://httpbin.org".to_string());
         assert_eq!(provider.request_url(&HttpBin::Post), "http://httpbin.org");
+    }
+
+    #[test]
+    fn test_authentication() {
+        let provider = Provider::<HttpBin>::default();
+        block_on(async {
+            let response: serde_json::Value = provider
+                .request_json(HttpBin::Bearer)
+                .await
+                .expect("request error");
+
+            assert!(response["authenticated"].as_bool().unwrap());
+        });
     }
 }
