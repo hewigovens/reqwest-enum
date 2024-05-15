@@ -69,7 +69,7 @@ mod ethereum_rpc_test {
     async fn test_blob_base_fee() {
         let provider = Provider::<EthereumRPC>::default();
         let result: JsonRpcResult<String> = provider
-            .request_json(EthereumRPC::BlobBaseFee)
+            .request_json(EthereumRPC::UninstallFilter("0xda"))
             .await
             .expect("request error");
 

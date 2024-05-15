@@ -70,6 +70,8 @@ pub enum EthereumRPC {
     GetTransactionCount(&'static str, BlockParameter),
     SendRawTransaction(&'static str),
     Syncing,
+    // filter id
+    UninstallFilter(&'static str),
 }
 
 impl JsonRpcTarget for EthereumRPC {
@@ -88,6 +90,7 @@ impl JsonRpcTarget for EthereumRPC {
             EthereumRPC::FeeHistory(_, _, _) => "eth_feeHistory",
             EthereumRPC::GetCode(_, _) => "eth_getCode",
             EthereumRPC::BlobBaseFee => "eth_blobBaseFee",
+            EthereumRPC::UninstallFilter(_) => "eth_uninstallFilter",
         }
     }
 
@@ -125,6 +128,9 @@ impl JsonRpcTarget for EthereumRPC {
             }
             EthereumRPC::GetCode(address, block) => {
                 vec![Value::String(address.to_string()), block.into()]
+            }
+            EthereumRPC::UninstallFilter(filter_id) => {
+                vec![Value::String(filter_id.to_string())]
             }
             EthereumRPC::ChainId
             | EthereumRPC::GasPrice
