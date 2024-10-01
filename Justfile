@@ -7,6 +7,9 @@ lint:
 test:
     cargo test --all --verbose
 
+publish:
+    cargo publish -p reqwest-enum
+
 ethereum-rpc:
     cargo run --package ethereum-rpc
 
