@@ -43,9 +43,12 @@ pub trait JsonRpcProviderType<T: Target>: ProviderType<T> {
 }
 
 pub type EndpointFn<T> = fn(target: &T) -> String;
+pub type RequestBuilderFn =
+    fn(request_builder: &reqwest::RequestBuilder) -> reqwest::RequestBuilder;
 pub struct Provider<T: Target> {
     /// endpoint closure to customize the endpoint (url / path)
     endpoint_fn: Option<EndpointFn<T>>,
+    request_fn: Option<RequestBuilderFn>,
     client: Client,
 }
 
@@ -163,11 +166,12 @@ impl<T> Provider<T>
 where
     T: Target,
 {
-    pub fn new(endpoint_fn: EndpointFn<T>) -> Self {
+    pub fn new(endpoint_fn: Option<EndpointFn<T>>, request_fn: Option<RequestBuilderFn>) -> Self {
         let client = reqwest::Client::new();
         Self {
             client,
-            endpoint_fn: Some(endpoint_fn),
+            endpoint_fn,
+            request_fn,
         }
     }
 
@@ -201,6 +205,9 @@ where
                 }
             }
         }
+        if let Some(request_fn) = &self.request_fn {
+            request = request_fn(&mut request);
+        }
         request
     }
 }
@@ -213,6 +220,7 @@ where
         Self {
             client: reqwest::Client::new(),
             endpoint_fn: None,
+            request_fn: None,
         }
     }
 }
@@ -296,8 +304,28 @@ mod tests {
             "https://httpbin.org/get"
         );
 
-        let provider = Provider::<HttpBin>::new(|_: &HttpBin| "http://httpbin.org".to_string());
+        let provider =
+            Provider::<HttpBin>::new(Some(|_: &HttpBin| "http://httpbin.org".to_string()), None);
         assert_eq!(provider.request_url(&HttpBin::Post), "http://httpbin.org");
+    }
+
+    #[test]
+    fn test_request_fn() {
+        let provider = Provider::<HttpBin>::new(
+            None,
+            Some(|builder: &reqwest::RequestBuilder| {
+                builder
+                    .try_clone()
+                    .expect("trying to clone request")
+                    .header("X-test", "test")
+            }),
+        );
+
+        let request = provider.request_builder(&HttpBin::Get).build().unwrap();
+        let headers = request.headers();
+
+        assert_eq!(request.method().to_string(), "GET");
+        assert_eq!(headers.get("X-test").unwrap(), "test");
     }
 
     #[test]

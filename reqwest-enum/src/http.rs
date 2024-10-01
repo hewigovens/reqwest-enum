@@ -5,6 +5,12 @@ pub struct HTTPBody {
     pub inner: reqwest::Body,
 }
 
+impl HTTPBody {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.inner.as_bytes().unwrap_or_default().to_vec()
+    }
+}
+
 pub type HTTPResponse = reqwest::Response;
 
 pub enum HTTPMethod {
@@ -16,6 +22,22 @@ pub enum HTTPMethod {
     OPTIONS,
     HEAD,
     CONNECT,
+}
+
+impl std::fmt::Display for HTTPMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            HTTPMethod::GET => "GET",
+            HTTPMethod::POST => "POST",
+            HTTPMethod::PUT => "PUT",
+            HTTPMethod::DELETE => "DELETE",
+            HTTPMethod::PATCH => "PATCH",
+            HTTPMethod::OPTIONS => "OPTIONS",
+            HTTPMethod::HEAD => "HEAD",
+            HTTPMethod::CONNECT => "CONNECT",
+        };
+        write!(f, "{}", s)
+    }
 }
 
 impl From<HTTPMethod> for Method {
