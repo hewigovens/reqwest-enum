@@ -25,6 +25,9 @@ jobs:
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
 
+      - name: Lint
+        run: cargo clippy -- -D warnings
+
       - name: Run tests
         run: cargo test --all --verbose
         env:
