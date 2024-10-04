@@ -21,7 +21,7 @@ Features:
 
 ```toml
 [dependencies]
-reqwest-enum = "0.2.0"
+reqwest-enum = "0.3.2"
 ```
 
 ## Example
@@ -44,7 +44,7 @@ pub enum HttpBin {
 pub trait Target {
     fn base_url(&self) -> &'static str;
     fn method(&self) -> HTTPMethod;
-    fn path(&self) -> &'static str;
+    fn path(&self) -> String;
     fn query(&self) -> HashMap<&'static str, &'static str>;
     fn headers(&self) -> HashMap<&'static str, &'static str>;
     fn authentication(&self) -> Option<AuthMethod>;
@@ -59,6 +59,10 @@ let provider = Provider::<HttpBin>::default();
 let response = provider.request(HttpBin::Get).await.unwrap();
 assert_eq!(response.status(), 200);
 ```
+
+Provider also allows you to customize the request by providing a `EndpointFn` or `RequestBuilderFn` closure if default behavior is not sufficient:
+1. Need to use different endpoint based on the target.
+2. Need to insert custom headers or intercept the final request.
 
 ### JSON-RPC
 
