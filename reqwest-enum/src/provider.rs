@@ -239,7 +239,9 @@ mod tests {
     use std::collections::hash_map::DefaultHasher;
     use std::collections::HashMap;
     use std::hash::{Hash, Hasher};
+    use std::time::{Duration, UNIX_EPOCH};
     use tokio_test::block_on;
+
     #[derive(Serialize, Deserialize)]
     struct Person {
         name: String,
@@ -266,11 +268,15 @@ mod tests {
             }
         }
 
-        fn path(&self) -> &'static str {
+        fn path(&self) -> String {
+            let ts = UNIX_EPOCH + Duration::from_secs(1728044812);
             match self {
-                HttpBin::Get => "/get",
-                HttpBin::Post => "/post",
-                HttpBin::Bearer => "/bearer",
+                HttpBin::Get => format!(
+                    "/get?ts={}",
+                    ts.duration_since(UNIX_EPOCH).unwrap().as_secs(),
+                ),
+                HttpBin::Post => "/post".into(),
+                HttpBin::Bearer => "/bearer".into(),
             }
         }
 
@@ -306,7 +312,7 @@ mod tests {
         let provider = Provider::<HttpBin>::default();
         assert_eq!(
             provider.request_url(&HttpBin::Get),
-            "https://httpbin.org/get"
+            "https://httpbin.org/get?ts=1728044812"
         );
 
         let provider =

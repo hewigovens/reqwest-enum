@@ -3,7 +3,7 @@ use std::collections::HashMap;
 pub trait Target {
     fn base_url(&self) -> &'static str;
     fn method(&self) -> HTTPMethod;
-    fn path(&self) -> &'static str;
+    fn path(&self) -> String;
     fn query(&self) -> HashMap<&'static str, &'static str>;
     fn headers(&self) -> HashMap<&'static str, &'static str>;
     fn authentication(&self) -> Option<AuthMethod>;

@@ -150,8 +150,8 @@ impl Target for EthereumRPC {
         HTTPMethod::POST
     }
 
-    fn path(&self) -> &'static str {
-        "/eth"
+    fn path(&self) -> String {
+        "/eth".into()
     }
 
     fn query(&self) -> HashMap<&'static str, &'static str> {
