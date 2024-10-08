@@ -1,5 +1,6 @@
 use crate::http::{AuthMethod, HTTPBody, HTTPMethod};
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
+
 pub trait Target {
     fn base_url(&self) -> &'static str;
     fn method(&self) -> HTTPMethod;
@@ -8,6 +9,7 @@ pub trait Target {
     fn headers(&self) -> HashMap<&'static str, &'static str>;
     fn authentication(&self) -> Option<AuthMethod>;
     fn body(&self) -> HTTPBody;
+    fn timeout(&self) -> Option<Duration>;
 
     // helpers for url
     fn query_string(&self) -> String {

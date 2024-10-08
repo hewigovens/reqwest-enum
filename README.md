@@ -49,6 +49,7 @@ pub trait Target {
     fn headers(&self) -> HashMap<&'static str, &'static str>;
     fn authentication(&self) -> Option<AuthMethod>;
     fn body(&self) -> HTTPBody;
+    fn timeout(&self) -> Option<Duration>;
 }
 ```
 

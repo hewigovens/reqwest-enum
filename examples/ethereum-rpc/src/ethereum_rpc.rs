@@ -7,7 +7,7 @@ use reqwest_enum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 #[derive(Serialize, Deserialize)]
 pub struct TransactionObject {
@@ -173,5 +173,9 @@ impl Target for EthereumRPC {
         let params = self.params();
         let req = JsonRpcRequest::new(method, params, 1);
         req.into()
+    }
+
+    fn timeout(&self) -> Option<Duration> {
+        None
     }
 }

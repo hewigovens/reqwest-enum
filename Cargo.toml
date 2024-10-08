@@ -1,5 +1,5 @@
 [workspace]
-package.version = "0.3.2"
+package.version = "0.3.3"
 package.edition = "2021"
 package.documentation = "https://docs.rs/reqwest_enum"
 package.authors = ["Tao Xu <hi@hewig.dev>"]

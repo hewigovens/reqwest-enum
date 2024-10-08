@@ -59,6 +59,9 @@ where
     async fn request(&self, target: T) -> Result<HTTPResponse, Error> {
         let mut request = self.request_builder(&target);
         request = request.body(target.body().inner);
+        if let Some(timeout) = target.timeout() {
+            request = request.timeout(timeout);
+        }
         request.send().await
     }
 }
@@ -304,6 +307,9 @@ mod tests {
                     phones: vec!["1234567890".to_string()],
                 }),
             }
+        }
+        fn timeout(&self) -> Option<Duration> {
+            None
         }
     }
 
