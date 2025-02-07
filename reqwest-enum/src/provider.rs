@@ -27,7 +27,6 @@ pub trait JsonProviderType<T: Target>: ProviderType<T> {
 }
 
 #[cfg(feature = "jsonrpc")]
-
 pub trait JsonRpcProviderType<T: Target>: ProviderType<T> {
     /// batch isomorphic JSON-RPC requests
     fn batch<U: DeserializeOwned>(
