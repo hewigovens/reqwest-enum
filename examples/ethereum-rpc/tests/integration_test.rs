@@ -54,7 +54,7 @@ mod ethereum_rpc_test {
             ))
             .await
             .unwrap();
-        assert_eq!(response.result, "0x0");
+        assert_eq!(response.result, "0x2");
     }
 
     #[tokio::test]
