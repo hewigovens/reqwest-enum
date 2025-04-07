@@ -1,5 +1,4 @@
 #[cfg(test)]
-
 mod ethereum_rpc_test {
     use ethereum_rpc::{BlockParameter, EthereumRPC};
     use reqwest_enum::jsonrpc::{JsonRpcResponse, JsonRpcResult};
@@ -60,19 +59,29 @@ mod ethereum_rpc_test {
     #[tokio::test]
     async fn test_syncing() {
         let provider = Provider::<EthereumRPC>::default();
-        let response: JsonRpcResponse<bool> =
+        let response: JsonRpcResult<bool> =
             provider.request_json(EthereumRPC::Syncing).await.unwrap();
-        assert!(!response.result);
+
+        assert!(matches!(response, JsonRpcResult::Value(JsonRpcResponse { id: _, jsonrpc: _, result: _ })));
     }
 
     #[tokio::test]
     async fn test_blob_base_fee() {
         let provider = Provider::<EthereumRPC>::default();
         let result: JsonRpcResult<String> = provider
-            .request_json(EthereumRPC::UninstallFilter("0xda"))
+            .request_json(EthereumRPC::BlobBaseFee)
             .await
             .expect("request error");
+        
+        match result {
+            JsonRpcResult::Value(JsonRpcResponse { id: _, jsonrpc: _, result }) => {
+                let base_fee = u128::from_str_radix(&result.replace("0x", ""), 16).unwrap();
 
-        assert!(matches!(result, JsonRpcResult::Error(_)));
+                assert!(base_fee > 0);
+            }
+            _ => {
+                panic!("expected JsonRpcResult::Value, got: {:?}", result);
+            }
+        }
     }
 }

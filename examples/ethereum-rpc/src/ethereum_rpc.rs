@@ -143,7 +143,7 @@ impl JsonRpcTarget for EthereumRPC {
 
 impl Target for EthereumRPC {
     fn base_url(&self) -> &'static str {
-        "https://rpc.ankr.com"
+        "https://ethereum-rpc.publicnode.com"
     }
 
     fn method(&self) -> HTTPMethod {
@@ -151,7 +151,7 @@ impl Target for EthereumRPC {
     }
 
     fn path(&self) -> String {
-        "/eth".into()
+        "/".into()
     }
 
     fn query(&self) -> HashMap<&'static str, &'static str> {

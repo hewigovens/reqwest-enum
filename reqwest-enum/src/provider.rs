@@ -71,7 +71,13 @@ where
 {
     async fn request_json<U: DeserializeOwned>(&self, target: T) -> Result<U, Error> {
         let response = self.request(target).await?;
-        let body = response.json::<U>().await?;
+
+        // Check status and get Response or reqwest::Error
+        let response = response.error_for_status()?;
+
+        // If error_for_status succeeded, deserialize the JSON.
+        let body: U = response.json().await?;
+
         Ok(body)
     }
 }
