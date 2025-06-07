@@ -6,7 +6,7 @@ use reqwest_enum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
-use std::{collections::HashMap};
+use std::{collections::HashMap, borrow::Cow};
 
 #[derive(Serialize, Deserialize)]
 pub struct TransactionObject {
@@ -141,8 +141,8 @@ impl JsonRpcTarget for EthereumRPC {
 }
 
 impl Target for EthereumRPC {
-    fn base_url(&self) -> String {
-        "https://ethereum-rpc.publicnode.com".to_string()
+    fn base_url(&self) -> Cow<'_, str> {
+        Cow::Borrowed("https://ethereum-rpc.publicnode.com")
     }
 
     fn method(&self) -> HTTPMethod {

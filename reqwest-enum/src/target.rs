@@ -3,9 +3,10 @@ use crate::{
     http::{AuthMethod, HTTPBody, HTTPMethod},
 };
 use std::collections::HashMap;
+use std::borrow::Cow;
 
 pub trait Target {
-    fn base_url(&self) -> String;
+    fn base_url(&self) -> Cow<'_, str>;
     fn method(&self) -> HTTPMethod;
     fn path(&self) -> String;
     fn query(&self) -> HashMap<String, String>;

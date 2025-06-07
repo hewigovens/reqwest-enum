@@ -26,4 +26,4 @@ futures = { workspace = true, optional = true }
 reqwest-middleware = { version = "0.4.2", optional = true }
 
 [dev-dependencies]
-tokio-test = { workspace = true }
+tokio = { workspace = true }

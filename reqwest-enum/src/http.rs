@@ -1,4 +1,5 @@
 use reqwest::Method;
+use crate::provider::ProviderRequestBuilder;
 
 #[derive(Debug, Default)]
 pub struct HTTPBody {
@@ -86,7 +87,7 @@ pub enum AuthMethod {
     /// ```rust,ignore
     /// AuthMethod::Custom(Box::new(|rb| rb.header("X-Custom-Auth", "some_value")))
     /// ```
-    Custom(Box<dyn Fn(reqwest::RequestBuilder) -> reqwest::RequestBuilder + Send + Sync + 'static>),
+    Custom(Box<dyn Fn(ProviderRequestBuilder) -> ProviderRequestBuilder + Send + Sync + 'static>),
 }
 
 impl AuthMethod {
@@ -102,7 +103,7 @@ impl AuthMethod {
     /// ```
     pub fn header_api_key(header_name: String, api_key: String) -> Self {
         AuthMethod::Custom(Box::new(
-            move |rb: reqwest::RequestBuilder| {
+            move |rb: ProviderRequestBuilder| {
                 rb.header(header_name.clone(), api_key.clone())
             },
         ))

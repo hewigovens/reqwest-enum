@@ -1,27 +1,33 @@
+use std::{time::Duration, future::Future};
+use serde::de::DeserializeOwned;
+use crate::{
+    http::{AuthMethod, HTTPBody, HTTPResponse},
+    error::Error,
+    target::Target,
+};
+
 #[cfg(feature = "jsonrpc")]
-use crate::jsonrpc::{JsonRpcError, JsonRpcRequest, JsonRpcResult};
-#[cfg(feature = "jsonrpc")]
-use crate::target::JsonRpcTarget;
+use crate::{
+    jsonrpc::{JsonRpcError, JsonRpcRequest, JsonRpcResult},
+    target::JsonRpcTarget,
+};
 #[cfg(feature = "jsonrpc")]
 use futures::future::join_all;
 
-use crate::{
-    http::{AuthMethod, HTTPBody, HTTPResponse},
-    target::Target,
-};
-use crate::Error;
-use std::time::Duration;
-use std::future::Future;
-use serde::de::DeserializeOwned;
-
+#[cfg(not(feature = "middleware"))]
+pub type ProviderRequestBuilder = reqwest::RequestBuilder;
+#[cfg(feature = "middleware")]
+pub type ProviderRequestBuilder = reqwest_middleware::RequestBuilder;
 #[cfg(feature = "middleware")]
 use reqwest_middleware::{ClientBuilder as MiddlewareClientBuilder, ClientWithMiddleware};
 
+// Base trait for providers, defining the core request method.
 pub trait ProviderType<T: Target>: Send {
     /// request to target and return http response
     fn request(&self, target: T) -> impl Future<Output = Result<HTTPResponse, Error>>;
 }
 
+// Trait for providers that can handle JSON responses, deserializing them.
 pub trait JsonProviderType<T: Target>: ProviderType<T> {
     /// request and deserialize response to json using serde
     fn request_json<U: DeserializeOwned>(
@@ -47,10 +53,9 @@ pub trait JsonRpcProviderType<T: Target>: ProviderType<T> {
 
 pub type EndpointFn<T> = fn(target: &T) -> String;
 pub type RequestBuilderFn<T> =
-    fn(request_builder: &reqwest::RequestBuilder, target: &T) -> reqwest::RequestBuilder;
+    Box<dyn Fn(&ProviderRequestBuilder, &T) -> ProviderRequestBuilder + Send + Sync>;
 
 /// Generic provider for HTTP requests to a `Target`. Handles construction, auth, and execution.
-#[derive(Debug)]
 pub struct Provider<T: Target> {
     /// endpoint closure to customize the endpoint (url / path)
     endpoint_fn: Option<EndpointFn<T>>,
@@ -62,6 +67,17 @@ pub struct Provider<T: Target> {
     client: reqwest::Client,
     #[cfg(feature = "middleware")]
     client: ClientWithMiddleware,
+}
+
+impl<T: Target> std::fmt::Debug for Provider<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Provider")
+            .field("endpoint_fn", &self.endpoint_fn.map(|_| "<function>")) // Print placeholder for fn pointer
+            .field("request_fn", &self.request_fn.as_ref().map(|_| "<function>")) // Print placeholder for Box<dyn Fn>
+            .field("timeout", &self.timeout)
+            .field("client", &self.client) // reqwest::Client and reqwest_middleware::ClientWithMiddleware implement Debug
+            .finish()
+    }
 }
 
 impl<T> ProviderType<T> for Provider<T>
@@ -110,7 +126,7 @@ where
 
         let representative_target = &targets[0];
 
-        let mut rb = self.request_builder(representative_target);
+        let mut builder = self.request_builder(representative_target)?;
 
         let mut rpc_payload = Vec::new();
         for (k, individual_target) in targets.iter().enumerate() {
@@ -119,10 +135,10 @@ where
         }
         let body = HTTPBody::from_array(&rpc_payload).map_err(|e| JsonRpcError { code: -32700, message: format!("Failed to serialize batch request: {}", e) })?;
 
-        rb = Ok(rb?.body(body.inner));
+        builder = builder.body(body.inner);
 
         // Build the final reqwest::Request
-        let final_request = rb?.build().map_err(|e| JsonRpcError { code: -32603, message: format!("Failed to build batch request: {}", e) })?;
+        let final_request = builder.build().map_err(|e| JsonRpcError { code: -32603, message: format!("Failed to build batch request: {}", e) })?;
 
         // Execute the request using self.client
         let response = self.client.execute(final_request).await.map_err(|e| JsonRpcError { code: -32603, message: format!("Batch request execution failed: {}", e) })?;
@@ -145,7 +161,7 @@ where
         }
 
         let chunk_targets = targets.chunks(chunk_size).collect::<Vec<_>>();
-        let mut rpc_requests = Vec::<reqwest::RequestBuilder>::new();
+        let mut rpc_requests = Vec::<ProviderRequestBuilder>::new();
 
         for (chunk_idx, chunk) in chunk_targets.into_iter().enumerate() {
             let target = &chunk[0];
@@ -165,6 +181,9 @@ where
             rpc_requests.push(request?);
         }
         let bodies = join_all(rpc_requests.into_iter().map(|request| async move {
+            #[cfg(feature = "middleware")]
+            let response = request.send().await.map_err(crate::Error::ReqwestMiddleware)?;
+            #[cfg(not(feature = "middleware"))]
             let response = request.send().await?;
             let body = response.json::<Vec<JsonRpcResult<U>>>().await?;
             Ok(body)
@@ -252,10 +271,9 @@ where
     }
 
     /// Constructs a `reqwest::RequestBuilder` for the `Target`, applying URL, method, query, headers, auth, body, timeout, and custom `request_fn`.
-    pub(crate) fn request_builder(&self, target: &T) -> Result<reqwest::RequestBuilder, Error> {
+    pub(crate) fn request_builder(&self, target: &T) -> Result<ProviderRequestBuilder, Error> {
         let url = self.request_url(target);
-        let temp_client = reqwest::Client::new();
-        let mut request_builder = temp_client.request(target.method().into(), url.as_str());
+        let mut request_builder = self.client.request(target.method().into(), url.as_str());
 
         // apply query params
         request_builder = request_builder.query(&target.query());
@@ -314,17 +332,14 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::{
         http::{AuthMethod, HTTPBody, HTTPMethod},
         provider::{JsonProviderType, Provider},
         target::Target,
     };
     use serde::{Deserialize, Serialize};
-    use std::collections::hash_map::DefaultHasher;
-    use std::collections::HashMap;
-    use std::hash::{Hash, Hasher};
-    use std::time::{Duration, UNIX_EPOCH};
-    use tokio_test::block_on;
+    use std::{borrow::Cow, collections::hash_map::DefaultHasher, collections::HashMap, hash::{Hash, Hasher}, time::{Duration, UNIX_EPOCH}};
 
     #[derive(Serialize, Deserialize)]
     struct Person {
@@ -341,8 +356,8 @@ mod tests {
     }
 
     impl Target for HttpBin {
-        fn base_url(&self) -> String {
-            "https://httpbin.org".to_string()
+        fn base_url(&self) -> Cow<'_, str> {
+            Cow::Borrowed("https://httpbin.org")
         }
 
         fn method(&self) -> HTTPMethod {
@@ -418,7 +433,7 @@ mod tests {
     fn test_request_fn() {
         let provider = Provider::<HttpBin>::new(
             None,
-            Some(|builder: &reqwest::RequestBuilder, target: &HttpBin| {
+            Some(Box::new(|builder: &ProviderRequestBuilder, target: &HttpBin| {
                 let mut hasher = DefaultHasher::new();
                 target.query_string().hash(&mut hasher);
                 let hash = hasher.finish();
@@ -427,7 +442,7 @@ mod tests {
                 req = req.header("X-test", "test");
                 req = req.header("X-hash", format!("{}", hash));
                 req
-            }),
+            })),
             None,
         );
 
@@ -439,34 +454,30 @@ mod tests {
         assert_eq!(headers.get("X-hash").unwrap(), "3270317559611782182");
     }
 
-    #[test]
-    fn test_authentication() {
+    #[tokio::test]
+    async fn test_authentication() {
         let provider = Provider::<HttpBin>::default();
-        block_on(async {
-            let response: serde_json::Value = provider
-                .request_json(HttpBin::Bearer)
-                .await
-                .expect("request error");
+        let response: serde_json::Value = provider
+            .request_json(HttpBin::Bearer)
+            .await
+            .expect("request error");
 
-            assert!(response["authenticated"].as_bool().unwrap());
-        });
+        assert!(response["authenticated"].as_bool().unwrap());
     }
 
-    #[test]
-    fn test_header_api_key_auth() {
+    #[tokio::test]
+    async fn test_header_api_key_auth() {
         let provider = Provider::<HttpBin>::default();
-        block_on(async {
-            let response: serde_json::Value = provider
-                .request_json(HttpBin::HeaderAuth)
-                .await
-                .expect("request error");
+        let response: serde_json::Value = provider
+            .request_json(HttpBin::HeaderAuth)
+            .await
+            .expect("request error");
 
-            // httpbin /headers returns a JSON object like: {"headers": {"Header-Name": "Header-Value", ...}}
-            let headers_map = response.get("headers").unwrap().as_object().unwrap();
-            assert_eq!(
-                headers_map.get("X-Test-Api-Key").unwrap().as_str().unwrap(),
-                "my-secret-key"
-            );
-        });
+        // httpbin /headers returns a JSON object like: {"headers": {"Header-Name": "Header-Value", ...}}
+        let headers_map = response.get("headers").unwrap().as_object().unwrap();
+        assert_eq!(
+            headers_map.get("X-Test-Api-Key").unwrap().as_str().unwrap(),
+            "my-secret-key"
+        );
     }
 }
