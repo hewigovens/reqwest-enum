@@ -11,8 +11,9 @@ Type-safe and enum style API for Rust, some benefits:
 Features:
 
 - [x] Type-safe and enum style HTTP API
-- [x] JSON-RPC with batching support
-- [ ] ...
+- [x] JSON-RPC with batching support (default feature)
+- [x] Optional middleware support via `reqwest-middleware` (using the `middleware` feature)
+- [x] Flexible request customization via closures
 
 
 ## Installation
@@ -21,8 +22,13 @@ Features:
 
 ```toml
 [dependencies]
-reqwest-enum = "0.3.2"
+reqwest-enum = "0.4.0"
 ```
+
+## Feature Flags
+
+- `jsonrpc`: (Enabled by default) Provides support for JSON-RPC requests, including batching. Requires `futures`.
+- `middleware`: Enables integration with `reqwest-middleware`, allowing you to use custom middleware with your requests. This changes the underlying `RequestBuilder` type used by the `Provider` to `reqwest_middleware::RequestBuilder`.
 
 ## Example
 
@@ -41,15 +47,16 @@ pub enum HttpBin {
 2. Implement `Target` for the enum:
 
 ```rust
+// Simplified trait definition for illustration. Refer to src/target.rs for the full definition.
 pub trait Target {
-    fn base_url(&self) -> &'static str;
+    fn base_url(&self) -> Cow<'_, str>; // Can be dynamic
     fn method(&self) -> HTTPMethod;
     fn path(&self) -> String;
-    fn query(&self) -> HashMap<&'static str, &'static str>;
-    fn headers(&self) -> HashMap<&'static str, &'static str>;
-    fn authentication(&self) -> Option<AuthMethod>;
-    fn body(&self) -> HTTPBody;
-    fn timeout(&self) -> Option<Duration>;
+    fn query(&self) -> HashMap<String, String>; // Key/Value for query parameters
+    fn headers(&self) -> HashMap<String, String>; // Key/Value for headers
+    fn authentication(&self) -> Option<AuthMethod>; // Optional authentication
+    fn body(&self) -> Result<HTTPBody, Error>; // Request body, can be fallible
+    // Note: Timeout is now handled by the Provider or individual request builders, not directly in Target.
 }
 ```
 
@@ -61,9 +68,16 @@ let response = provider.request(HttpBin::Get).await.unwrap();
 assert_eq!(response.status(), 200);
 ```
 
-Provider also allows you to customize the request by providing a `EndpointFn` or `RequestBuilderFn` closure if default behavior is not sufficient:
-1. Need to use different endpoint based on the target.
-2. Need to insert custom headers or intercept the final request.
+The `Provider` offers powerful customization through closures passed to `Provider::new`:
+- `EndpointFn`: `fn(target: &T) -> String`
+  - Allows you to dynamically determine the complete request URL based on the `target` enum variant. This overrides the default behavior of combining `base_url()` and `path()`.
+- `RequestBuilderFn`: `Box<dyn Fn(&ProviderRequestBuilder, &T) -> ProviderRequestBuilder + Send + Sync>`
+  - Provides a way to modify the `ProviderRequestBuilder` after it has been initially constructed by the `Provider` but before the request is sent. This is useful for:
+    - Adding or modifying headers.
+    - Changing request parameters or body.
+    - Any other final adjustments to the request, especially useful when interacting with middleware if the `middleware` feature is enabled.
+
+The `ProviderRequestBuilder` type alias is used internally and in `RequestBuilderFn` to ensure type compatibility whether you are using `reqwest::RequestBuilder` (default) or `reqwest_middleware::RequestBuilder` (with the `middleware` feature).
 
 ### JSON-RPC
 
