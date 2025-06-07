@@ -1,4 +1,5 @@
 use reqwest::Method;
+use crate::provider::ProviderRequestBuilder;
 
 #[derive(Debug, Default)]
 pub struct HTTPBody {
@@ -56,32 +57,69 @@ impl From<HTTPMethod> for Method {
 }
 
 impl HTTPBody {
-    pub fn from<T>(value: &T) -> Self
-    where
-        T: serde::Serialize,
-    {
-        let mut bytes: Vec<u8> = Vec::new();
-        serde_json::to_writer(&mut bytes, value).expect("serde_json serialize error");
-        Self {
-            inner: bytes.into(),
-        }
+    pub fn from<S: serde::Serialize>(value: &S) -> Result<Self, serde_json::Error> {
+        let mut writer = Vec::new();
+        serde_json::to_writer(&mut writer, value)?;
+        Ok(Self { inner: writer.into() })
     }
 
-    pub fn from_array<T>(array: &[T]) -> Self
-    where
-        T: serde::Serialize,
-    {
-        let mut bytes: Vec<u8> = Vec::new();
-        serde_json::to_writer(&mut bytes, array).expect("serde_json serialize error");
-        Self {
-            inner: bytes.into(),
-        }
+    pub fn from_array<S: serde::Serialize>(array: &[S]) -> Result<Self, serde_json::Error> {
+        let mut writer = Vec::new();
+        serde_json::to_writer(&mut writer, array)?;
+        Ok(Self { inner: writer.into() })
     }
 }
 
+/// Authentication method for a request (Basic, Bearer, or Custom closure).
 pub enum AuthMethod {
-    // Basic(username, password)
-    Basic(&'static str, &'static str),
-    // Bearer(token)
-    Bearer(&'static str),
+    /// HTTP Basic authentication.
+    /// Takes a username (`String`) and an optional password (`Option<String>`).
+    Basic(String, Option<String>),
+    /// HTTP Bearer authentication.
+    /// Takes a token (`String`).
+    Bearer(String),
+    /// Custom authentication logic provided as a closure.
+    /// The closure takes a `reqwest::RequestBuilder` and returns a modified `reqwest::RequestBuilder`.
+    /// This allows for flexible and complex authentication mechanisms.
+    /// 
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// AuthMethod::Custom(Box::new(|rb| rb.header("X-Custom-Auth", "some_value")))
+    /// ```
+    Custom(Box<dyn Fn(ProviderRequestBuilder) -> ProviderRequestBuilder + Send + Sync + 'static>),
+}
+
+impl AuthMethod {
+    /// Helper for `AuthMethod::Custom`: API key authentication via a request header.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use reqwest_enum::http::AuthMethod;
+    ///
+    /// let auth = AuthMethod::header_api_key("Authorization".to_string(), "mysecretapikey".to_string());
+    /// // This can then be returned by a Target's `authentication()` method.
+    /// ```
+    pub fn header_api_key(header_name: String, api_key: String) -> Self {
+        AuthMethod::Custom(Box::new(
+            move |rb: ProviderRequestBuilder| {
+                rb.header(header_name.clone(), api_key.clone())
+            },
+        ))
+    }
+}
+
+impl std::fmt::Debug for AuthMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AuthMethod::Basic(username, password) => f
+                .debug_tuple("Basic")
+                .field(username)
+                .field(password)
+                .finish(),
+            AuthMethod::Bearer(token) => f.debug_tuple("Bearer").field(token).finish(),
+            AuthMethod::Custom(_) => f.debug_tuple("Custom").field(&"<function>").finish(),
+        }
+    }
 }

@@ -1,6 +1,6 @@
 [workspace]
-package.version = "0.3.3"
-package.edition = "2021"
+package.version = "0.4.0"
+package.edition = "2024"
 package.documentation = "https://docs.rs/reqwest_enum"
 package.authors = ["Tao Xu <hi@hewig.dev>"]
 package.readme = "README.md"
@@ -16,4 +16,5 @@ reqwest = { version = "^0.12.0", features = ["json"] }
 serde = { version = "^1.0.0", features = ["derive"] }
 serde_json = "^1.0.0"
 futures = "^0.3.0"
+tokio = { version = "^1.0", features = ["macros", "rt-multi-thread"] }
 tokio-test = "0.4.2"

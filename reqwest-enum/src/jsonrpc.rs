@@ -1,8 +1,6 @@
-use crate::http::HTTPBody;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[cfg(feature = "jsonrpc")]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonRpcRequest {
     pub jsonrpc: &'static str,
@@ -11,7 +9,6 @@ pub struct JsonRpcRequest {
     pub params: Vec<Value>,
 }
 
-#[cfg(feature = "jsonrpc")]
 impl JsonRpcRequest {
     pub fn new(method: &'static str, params: Vec<Value>, id: u64) -> Self {
         Self {
@@ -23,21 +20,12 @@ impl JsonRpcRequest {
     }
 }
 
-#[cfg(feature = "jsonrpc")]
 impl From<JsonRpcRequest> for reqwest::Body {
     fn from(val: JsonRpcRequest) -> Self {
         serde_json::to_vec(&val).unwrap().into()
     }
 }
 
-#[cfg(feature = "jsonrpc")]
-impl From<JsonRpcRequest> for HTTPBody {
-    fn from(val: JsonRpcRequest) -> Self {
-        HTTPBody::from(&val)
-    }
-}
-
-#[cfg(feature = "jsonrpc")]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonRpcResponse<T> {
     pub id: JsonRpcId,
@@ -45,7 +33,6 @@ pub struct JsonRpcResponse<T> {
     pub result: T,
 }
 
-#[cfg(feature = "jsonrpc")]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonRpcErrorResponse {
     pub jsonrpc: String,
@@ -53,17 +40,14 @@ pub struct JsonRpcErrorResponse {
     pub error: JsonRpcError,
 }
 
-#[cfg(feature = "jsonrpc")]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonRpcError {
     pub code: i64,
     pub message: String,
 }
 
-#[cfg(feature = "jsonrpc")]
 impl std::error::Error for JsonRpcError {}
 
-#[cfg(feature = "jsonrpc")]
 impl From<reqwest::Error> for JsonRpcError {
     fn from(err: reqwest::Error) -> Self {
         JsonRpcError {
@@ -73,14 +57,32 @@ impl From<reqwest::Error> for JsonRpcError {
     }
 }
 
-#[cfg(feature = "jsonrpc")]
+impl From<crate::Error> for JsonRpcError {
+    fn from(err: crate::Error) -> Self {
+        match err {
+            crate::Error::Reqwest(e) => {
+                // Reuse the existing From<reqwest::Error> for JsonRpcError
+                e.into()
+            }
+            #[cfg(feature = "middleware")]
+            crate::Error::ReqwestMiddleware(e) => JsonRpcError {
+                code: -32603, // Internal error
+                message: format!("Middleware error: {}", e),
+            },
+            crate::Error::SerdeJson(e) => JsonRpcError {
+                code: -32603, // Internal error (could also be Parse error -32700 depending on context)
+                message: format!("Serialization/deserialization error: {}", e),
+            },
+        }
+    }
+}
+
 impl std::fmt::Display for JsonRpcError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} ({})", self.message, self.code)
     }
 }
 
-#[cfg(feature = "jsonrpc")]
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum JsonRpcResult<T> {
@@ -88,7 +90,6 @@ pub enum JsonRpcResult<T> {
     Error(JsonRpcErrorResponse),
 }
 
-#[cfg(feature = "jsonrpc")]
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum JsonRpcId {
