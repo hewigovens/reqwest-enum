@@ -1,22 +1,24 @@
-use crate::http::{AuthMethod, HTTPBody, HTTPMethod};
-use std::{collections::HashMap, time::Duration};
+use crate::{
+    Error,
+    http::{AuthMethod, HTTPBody, HTTPMethod},
+};
+use std::collections::HashMap;
 
 pub trait Target {
-    fn base_url(&self) -> &'static str;
+    fn base_url(&self) -> String;
     fn method(&self) -> HTTPMethod;
     fn path(&self) -> String;
-    fn query(&self) -> HashMap<&'static str, &'static str>;
-    fn headers(&self) -> HashMap<&'static str, &'static str>;
+    fn query(&self) -> HashMap<String, String>;
+    fn headers(&self) -> HashMap<String, String>;
     fn authentication(&self) -> Option<AuthMethod>;
-    fn body(&self) -> HTTPBody;
-    fn timeout(&self) -> Option<Duration>;
+    fn body(&self) -> Result<HTTPBody, Error>;
 
     // helpers for url
     fn query_string(&self) -> String {
         self.query()
             .iter()
             .map(|(k, v)| format!("{}={}", k, v))
-            .collect::<Vec<_>>()
+            .collect::<Vec<String>>()
             .join("&")
     }
 

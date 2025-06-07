@@ -1,6 +1,6 @@
 [workspace]
-package.version = "0.3.3"
-package.edition = "2021"
+package.version = "0.4.0"
+package.edition = "2024"
 package.documentation = "https://docs.rs/reqwest_enum"
 package.authors = ["Tao Xu <hi@hewig.dev>"]
 package.readme = "README.md"

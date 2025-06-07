@@ -14,12 +14,16 @@ edition = { workspace = true }
 [features]
 default = ["jsonrpc"]
 jsonrpc = ["dep:futures"]
+middleware = ["dep:reqwest-middleware"]
 
 [dependencies]
+thiserror = "2.0.12"
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
 futures = { workspace = true, optional = true }
+reqwest-middleware = { version = "0.4.2", optional = true }
 
 [dev-dependencies]
 tokio-test = { workspace = true }

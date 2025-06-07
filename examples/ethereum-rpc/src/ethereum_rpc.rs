@@ -1,13 +1,12 @@
-extern crate reqwest;
-extern crate reqwest_enum;
+use reqwest_enum::http::HTTPBody;
 use reqwest_enum::jsonrpc::JsonRpcRequest;
 use reqwest_enum::{
-    http::{AuthMethod, HTTPBody, HTTPMethod},
+    http::{AuthMethod, HTTPMethod},
     target::{JsonRpcTarget, Target},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap};
 
 #[derive(Serialize, Deserialize)]
 pub struct TransactionObject {
@@ -142,8 +141,8 @@ impl JsonRpcTarget for EthereumRPC {
 }
 
 impl Target for EthereumRPC {
-    fn base_url(&self) -> &'static str {
-        "https://ethereum-rpc.publicnode.com"
+    fn base_url(&self) -> String {
+        "https://ethereum-rpc.publicnode.com".to_string()
     }
 
     fn method(&self) -> HTTPMethod {
@@ -154,13 +153,13 @@ impl Target for EthereumRPC {
         "/".into()
     }
 
-    fn query(&self) -> HashMap<&'static str, &'static str> {
+    fn query(&self) -> HashMap<String, String> {
         HashMap::default()
     }
 
-    fn headers(&self) -> HashMap<&'static str, &'static str> {
+    fn headers(&self) -> HashMap<String, String> {
         let mut headers = HashMap::new();
-        headers.insert("Content-Type", "application/json");
+        headers.insert("Content-Type".to_string(), "application/json".to_string());
         headers
     }
 
@@ -168,14 +167,11 @@ impl Target for EthereumRPC {
         None
     }
 
-    fn body(&self) -> HTTPBody {
+    fn body(&self) -> Result<HTTPBody, reqwest_enum::Error> {
         let method = self.method_name();
         let params = self.params();
         let req = JsonRpcRequest::new(method, params, 1);
-        req.into()
+        Ok(HTTPBody::from(&req)?)
     }
 
-    fn timeout(&self) -> Option<Duration> {
-        None
-    }
 }

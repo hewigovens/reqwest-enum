@@ -56,32 +56,48 @@ impl From<HTTPMethod> for Method {
 }
 
 impl HTTPBody {
-    pub fn from<T>(value: &T) -> Self
-    where
-        T: serde::Serialize,
-    {
-        let mut bytes: Vec<u8> = Vec::new();
-        serde_json::to_writer(&mut bytes, value).expect("serde_json serialize error");
-        Self {
-            inner: bytes.into(),
-        }
+    pub fn from<S: serde::Serialize>(value: &S) -> Result<Self, serde_json::Error> {
+        let mut writer = Vec::new();
+        serde_json::to_writer(&mut writer, value)?;
+        Ok(Self { inner: writer.into() })
     }
 
-    pub fn from_array<T>(array: &[T]) -> Self
-    where
-        T: serde::Serialize,
-    {
-        let mut bytes: Vec<u8> = Vec::new();
-        serde_json::to_writer(&mut bytes, array).expect("serde_json serialize error");
-        Self {
-            inner: bytes.into(),
-        }
+    pub fn from_array<S: serde::Serialize>(array: &[S]) -> Result<Self, serde_json::Error> {
+        let mut writer = Vec::new();
+        serde_json::to_writer(&mut writer, array)?;
+        Ok(Self { inner: writer.into() })
     }
 }
 
 pub enum AuthMethod {
     // Basic(username, password)
-    Basic(&'static str, &'static str),
+    Basic(String, Option<String>),
     // Bearer(token)
-    Bearer(&'static str),
+    Bearer(String),
+    // Custom authentication logic
+    Custom(Box<dyn Fn(reqwest::RequestBuilder) -> reqwest::RequestBuilder + Send + Sync + 'static>),
+}
+
+impl AuthMethod {
+    pub fn header_api_key(header_name: String, api_key: String) -> Self {
+        AuthMethod::Custom(Box::new(
+            move |rb: reqwest::RequestBuilder| {
+                rb.header(header_name.clone(), api_key.clone())
+            },
+        ))
+    }
+}
+
+impl std::fmt::Debug for AuthMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AuthMethod::Basic(username, password) => f
+                .debug_tuple("Basic")
+                .field(username)
+                .field(password)
+                .finish(),
+            AuthMethod::Bearer(token) => f.debug_tuple("Bearer").field(token).finish(),
+            AuthMethod::Custom(_) => f.debug_tuple("Custom").field(&"<function>").finish(),
+        }
+    }
 }
