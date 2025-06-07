@@ -8,7 +8,7 @@ lint:
     cargo clippy -- -D warnings
 
 test:
-    cargo test --all --verbose
+    cargo test --all --all-features
 
 publish:
     cargo publish -p reqwest-enum

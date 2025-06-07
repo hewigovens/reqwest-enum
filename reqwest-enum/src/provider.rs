@@ -49,11 +49,14 @@ pub type EndpointFn<T> = fn(target: &T) -> String;
 pub type RequestBuilderFn<T> =
     fn(request_builder: &reqwest::RequestBuilder, target: &T) -> reqwest::RequestBuilder;
 
+/// Generic provider for HTTP requests to a `Target`. Handles construction, auth, and execution.
 #[derive(Debug)]
 pub struct Provider<T: Target> {
     /// endpoint closure to customize the endpoint (url / path)
     endpoint_fn: Option<EndpointFn<T>>,
     request_fn: Option<RequestBuilderFn<T>>,
+    /// An optional default timeout for all requests made by this provider.
+    /// If set, this timeout is applied to each request unless overridden by more specific timeout logic.
     timeout: Option<Duration>,
     #[cfg(not(feature = "middleware"))]
     client: reqwest::Client,
@@ -65,6 +68,7 @@ impl<T> ProviderType<T> for Provider<T>
 where
     T: Target + Send,
 {
+    /// Builds and executes a request to `Target`, returning raw `HTTPResponse`.
     async fn request(&self, target: T) -> Result<HTTPResponse, Error> {
         let req = self.request_builder(&target)?.build()?;
         self.client.execute(req).await.map_err(Error::from)
@@ -191,6 +195,7 @@ impl<T> Provider<T>
 where
     T: Target,
 {
+    /// Creates a new `Provider` with optional URL, request builder customization, and timeout.
     pub fn new(
         endpoint_fn: Option<EndpointFn<T>>,
         request_fn: Option<RequestBuilderFn<T>>,
@@ -246,6 +251,7 @@ where
         url
     }
 
+    /// Constructs a `reqwest::RequestBuilder` for the `Target`, applying URL, method, query, headers, auth, body, timeout, and custom `request_fn`.
     pub(crate) fn request_builder(&self, target: &T) -> Result<reqwest::RequestBuilder, Error> {
         let url = self.request_url(target);
         let temp_client = reqwest::Client::new();

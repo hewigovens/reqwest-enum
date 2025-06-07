@@ -69,16 +69,37 @@ impl HTTPBody {
     }
 }
 
+/// Authentication method for a request (Basic, Bearer, or Custom closure).
 pub enum AuthMethod {
-    // Basic(username, password)
+    /// HTTP Basic authentication.
+    /// Takes a username (`String`) and an optional password (`Option<String>`).
     Basic(String, Option<String>),
-    // Bearer(token)
+    /// HTTP Bearer authentication.
+    /// Takes a token (`String`).
     Bearer(String),
-    // Custom authentication logic
+    /// Custom authentication logic provided as a closure.
+    /// The closure takes a `reqwest::RequestBuilder` and returns a modified `reqwest::RequestBuilder`.
+    /// This allows for flexible and complex authentication mechanisms.
+    /// 
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// AuthMethod::Custom(Box::new(|rb| rb.header("X-Custom-Auth", "some_value")))
+    /// ```
     Custom(Box<dyn Fn(reqwest::RequestBuilder) -> reqwest::RequestBuilder + Send + Sync + 'static>),
 }
 
 impl AuthMethod {
+    /// Helper for `AuthMethod::Custom`: API key authentication via a request header.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use reqwest_enum::http::AuthMethod;
+    ///
+    /// let auth = AuthMethod::header_api_key("Authorization".to_string(), "mysecretapikey".to_string());
+    /// // This can then be returned by a Target's `authentication()` method.
+    /// ```
     pub fn header_api_key(header_name: String, api_key: String) -> Self {
         AuthMethod::Custom(Box::new(
             move |rb: reqwest::RequestBuilder| {

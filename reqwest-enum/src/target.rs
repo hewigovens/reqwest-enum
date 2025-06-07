@@ -10,6 +10,7 @@ pub trait Target {
     fn path(&self) -> String;
     fn query(&self) -> HashMap<String, String>;
     fn headers(&self) -> HashMap<String, String>;
+    /// Specifies the `AuthMethod` for the request, or `None` if no authentication.
     fn authentication(&self) -> Option<AuthMethod>;
     fn body(&self) -> Result<HTTPBody, Error>;
 
