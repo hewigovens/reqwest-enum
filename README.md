@@ -1,6 +1,7 @@
 # reqwest-enum
 [![crates.io](https://img.shields.io/crates/v/reqwest-enum.svg)](https://crates.io/crates/reqwest-enum)
 [![CI](https://github.com/hewigovens/reqwest-enum/actions/workflows/ci.yml/badge.svg)](https://github.com/hewigovens/reqwest-enum/actions/workflows/ci.yml)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/hewigovens/reqwest-enum)
 
 Type-safe and enum style API for Rust, some benefits:
 
