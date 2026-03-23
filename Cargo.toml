@@ -4,7 +4,7 @@ package.edition = "2024"
 package.documentation = "https://docs.rs/reqwest_enum"
 package.authors = ["Tao Xu <hi@hewig.dev>"]
 package.readme = "README.md"
-package.license = "MIT OR Apache-2.0"
+package.license = "Apache-2.0"
 members = ["reqwest-enum", "examples/ethereum-rpc"]
 
 resolver = "2"
