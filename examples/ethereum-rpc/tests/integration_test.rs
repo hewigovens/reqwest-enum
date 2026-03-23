@@ -53,7 +53,7 @@ mod ethereum_rpc_test {
             ))
             .await
             .unwrap();
-        assert_eq!(response.result, "0x2");
+        assert_eq!(response.result, "0x3");
     }
 
     #[tokio::test]
@@ -62,7 +62,14 @@ mod ethereum_rpc_test {
         let response: JsonRpcResult<bool> =
             provider.request_json(EthereumRPC::Syncing).await.unwrap();
 
-        assert!(matches!(response, JsonRpcResult::Value(JsonRpcResponse { id: _, jsonrpc: _, result: _ })));
+        assert!(matches!(
+            response,
+            JsonRpcResult::Value(JsonRpcResponse {
+                id: _,
+                jsonrpc: _,
+                result: _
+            })
+        ));
     }
 
     #[tokio::test]
@@ -72,9 +79,13 @@ mod ethereum_rpc_test {
             .request_json(EthereumRPC::BlobBaseFee)
             .await
             .expect("request error");
-        
+
         match result {
-            JsonRpcResult::Value(JsonRpcResponse { id: _, jsonrpc: _, result }) => {
+            JsonRpcResult::Value(JsonRpcResponse {
+                id: _,
+                jsonrpc: _,
+                result,
+            }) => {
                 let base_fee = u128::from_str_radix(&result.replace("0x", ""), 16).unwrap();
 
                 assert!(base_fee > 0);

@@ -120,7 +120,7 @@ assert_eq!(response.result, "0x1");
 
 ## License
 
-[MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE)
+[Apache-2.0](LICENSE)
 
 ## Credits
 
